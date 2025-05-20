@@ -14,7 +14,7 @@ class Configuration:
 
         torch.set_default_tensor_type(torch.DoubleTensor)
 
-        self.cpu_num = (os.cpu_count()/2)-1
+        self.cpu_num = int((os.cpu_count()/2)-1)
 
         self.Q = 1
         self.alpha = 1

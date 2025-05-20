@@ -1,6 +1,7 @@
 import math
 import time
 import model
+import csv
 import numpy as np
 import torch
 from torch_geometric.data import Data
@@ -37,48 +38,60 @@ class Test_operator:
         return probMatrix
     
 
-    def test (instance, solution, test_config, set_name, writer):
-        for j in range(5):
-            # conversion
-            conv_start = time.time()
-            model = Model(-1, 20, 5)
-            model.load_state_dict(torch.load("2540_epocas", weights_only=True, map_location=test_config.device))
-            
-            c = Conversor(instance=instance, solution=solution)
-            data = c.convert_to_t_geometric()
+    def test (self, subset, file_name, test_config, model_name):
 
-            gnnData  = Data(x=torch.tensor(data.x, dtype=torch.float64),edge_index=data.edge_index,
-                                edge_attr=torch.tensor(data["edge_attr"], dtype=torch.float64),
-                                y=torch.tensor(data.y, dtype=torch.float64))
+        with open(file_name, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-            output = model(gnnData)
-            probMatrix = Test_operator.getProbMatrix(output, gnnData.edge_index)
-            conv_end = time.time()
+            for i in range (0, len(subset)-1, 2):
+                sol_file = "test_set/"+subset[i]
+                ins_file = "test_set/"+subset[i+1]
+                solution = vrplib.read_solution(sol_file)
+                instance = vrplib.read_instance(ins_file)
+                print(subset[i+1])
+                for j in range(5):
+                    print(j)
+                    # conversion
+                    conv_start = time.time()
+                    model = Model(-1, 20, 5)
+                    model.load_state_dict(torch.load(model_name, weights_only=True, map_location=test_config.device))
+                    
+                    c = Conversor(instance=instance, solution=solution)
+                    data = c.convert_to_t_geometric()
 
-            # aco
-            aco_start = time.time()
-            aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
-                                        test_config.alpha, test_config.beta, test_config.Q,
-                                        test_config.decay, 0, test_config.probNew, test_config.seed)
-            aco.init()
-            aco.optimize()
-            aco_end = time.time()
-            
-            # aco+gnn
-            model_start = time.time()
-            aco_gnn = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
-                                            test_config.alpha, test_config.beta, test_config.Q,
-                                            test_config.decay, 0, test_config.probNew, test_config.seed)
-            
-            aco_gnn.init()
-            aco.optimize()
-            model_end = time.time()
+                    gnnData  = Data(x=torch.tensor(data.x, dtype=torch.float64),edge_index=data.edge_index,
+                                        edge_attr=torch.tensor(data["edge_attr"], dtype=torch.float64),
+                                        y=torch.tensor(data.y, dtype=torch.float64))
 
-            aco_time = aco_end-aco_start
-            conv_time = conv_end-conv_start
-            model_time = model_end-model_start
+                    output = model(gnnData)
+                    probMatrix = Test_operator.getProbMatrix(output, gnnData.edge_index)
+                    conv_end = time.time()
+
+                    # aco
+                    aco_start = time.time()
+                    aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
+                                                test_config.alpha, test_config.beta, test_config.Q,
+                                                test_config.decay, 0, test_config.probNew, test_config.seed)
+                    aco.init(gnnData.x, gnnData.y, None)
+                    aco.optimize(100, 25)
+                    aco_end = time.time()
+                    
+                    # aco+gnn
+                    model_start = time.time()
+                    aco_gnn = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
+                                                    test_config.alpha, test_config.beta, test_config.Q,
+                                                    test_config.decay, 0, test_config.probNew, test_config.seed)
+                    
+                    aco_gnn.init(gnnData.x, gnnData.y, probMatrix)
+                    aco.optimize(100, 25)
+                    model_end = time.time()
+
+                    # times; writing
+                    aco_time = aco_end-aco_start
+                    conv_time = conv_end-conv_start
+                    model_time = model_end-model_start
 
 
-            writer.writerow([set_name] + [round(aco_time, 2)] + ["acoiterations"], ["acoCost"] +
-                            [round(conv_time, 2)] + [round(model_time, 2)] + ["modelIterations"] +
-                            ["modelCost"] + [solution["cost"]])
+                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + ["acoiterations"], ["acoCost"] +
+                                    [round(conv_time, 2)] + [round(model_time, 2)] + ["modelIterations"] +
+                                    ["modelCost"] + [solution["cost"]])

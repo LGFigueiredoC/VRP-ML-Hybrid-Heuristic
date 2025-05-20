@@ -9,8 +9,23 @@ class File_manager:
         self.files = []
 
         for i in range(cpu_num):
-            self.files.append("{}{}".format(data_set_name, i))
+            self.files.append("{}{}.csv".format("result_", i))
+        
+        step = len(self.set)//cpu_num
+        print(len(self.set))
+        print(cpu_num)
+        print(step)
+        self.subsets = []
 
+        for i in range(cpu_num):
+            print()
+            print(i*step)
+            print((i+1)*step)
+            self.subsets.append(self.set[i*step:(i+1)*step])
+
+        self.subsets[cpu_num-1].append(self.set[-(len(self.set)%cpu_num)::])
+
+    
 
     def file_result (self):
         with open("TestResults.csv", 'a', newline='') as csvfile:
