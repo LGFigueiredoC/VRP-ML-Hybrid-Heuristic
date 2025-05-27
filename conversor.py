@@ -27,7 +27,7 @@ class Conversor:
 
 
     def euclidian_distance (self, coord_a, coord_b):
-        distance = (((coord_a['x']-coord_b['x'])**2)+((coord_a['y']-coord_b['y'])**2))//2
+        distance = (((coord_a['x']-coord_b['x'])**2)+((coord_a['y']-coord_b['y'])**2)) ** (1/2)
 
         return distance
     
