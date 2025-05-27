@@ -40,17 +40,17 @@ class Test_operator:
 
     def test (self, subset, file_name, test_config, model_name):
 
-        with open(file_name, 'w', newline='') as csvfile:
+        with open(file_name, 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-
+            
             for i in range (0, len(subset)-1, 2):
                 sol_file = "test_set/"+subset[i]
                 ins_file = "test_set/"+subset[i+1]
                 solution = vrplib.read_solution(sol_file)
                 instance = vrplib.read_instance(ins_file)
                 print(subset[i+1])
+
                 for j in range(5):
-                    print(j)
                     # conversion
                     conv_start = time.time()
                     model = Model(-1, 20, 5)
@@ -72,7 +72,7 @@ class Test_operator:
                     aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                 test_config.alpha, test_config.beta, test_config.Q,
                                                 test_config.decay, 0, test_config.probNew, test_config.seed)
-                    aco.init(gnnData.x, gnnData.y, None)
+                    aco.init(instance["edge_weight"], instance["demand"], None)
                     aco.optimize(100, 25)
                     aco_end = time.time()
                     
@@ -82,7 +82,7 @@ class Test_operator:
                                                     test_config.alpha, test_config.beta, test_config.Q,
                                                     test_config.decay, 0, test_config.probNew, test_config.seed)
                     
-                    aco_gnn.init(gnnData.x, gnnData.y, probMatrix)
+                    aco_gnn.init(instance["edge_weight"], instance["demand"], probMatrix)
                     aco.optimize(100, 25)
                     model_end = time.time()
 
@@ -91,7 +91,8 @@ class Test_operator:
                     conv_time = conv_end-conv_start
                     model_time = model_end-model_start
 
-
-                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + ["acoiterations"], ["acoCost"] +
-                                    [round(conv_time, 2)] + [round(model_time, 2)] + ["modelIterations"] +
-                                    ["modelCost"] + [solution["cost"]])
+                    # print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
+                
+                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + ["acoiterations"] + ["acoCost"] +
+                        [round(conv_time, 2)] + [round(model_time, 2)] + ["modelIterations"] +
+                        ["modelCost"] + [solution["cost"]])
