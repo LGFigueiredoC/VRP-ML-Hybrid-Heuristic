@@ -73,7 +73,7 @@ class Test_operator:
                                                 test_config.alpha, test_config.beta, test_config.Q,
                                                 test_config.decay, 0, test_config.probNew, test_config.seed)
                     aco.init(instance["edge_weight"], instance["demand"], None)
-                    [path_aco, cost_aco] = aco.optimize(100, 25)
+                    [path_aco, cost_aco, it_aco] = aco.optimize(100, 25)
                     aco_end = time.time()
                     
                     # aco+gnn
@@ -83,7 +83,7 @@ class Test_operator:
                                                     test_config.decay, 0, test_config.probNew, test_config.seed)
                     
                     aco_gnn.init(instance["edge_weight"], instance["demand"], probMatrix)
-                    [path_gnn, cost_gnn] = aco.optimize(100, 25)
+                    [path_gnn, cost_gnn, it_gnn] = aco.optimize(100, 25)
                     model_end = time.time()
 
                     # times; writing
@@ -93,6 +93,6 @@ class Test_operator:
 
                     # print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
                 
-                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + ["acoiterations"] + [round(cost_aco, 2)] +
-                        [round(conv_time, 2)] + [round(model_time, 2)] + ["modelIterations"] +
+                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + [it_aco] + [round(cost_aco, 2)] +
+                        [round(conv_time, 2)] + [round(model_time, 2)] + [it_gnn] +
                         [round(cost_gnn, 2)] + [solution["cost"]])
