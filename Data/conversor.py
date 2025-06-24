@@ -1,7 +1,6 @@
 import vrplib
 import networkx as nx
 from torch_geometric.utils.convert import from_networkx
-import numpy as np
 
 class Conversor:
 
@@ -11,55 +10,52 @@ class Conversor:
 
     # Para usar basta criar o objeto com o nome do arquivo como parâmetro e utilizar a
     # função convert_to_t_geometric
-    def __init__(self, instance_file=None, solution_file=None, instance=None, solution=None, size=None):
-        if (instance_file != None):
-            self.current_instance = vrplib.read_instance(instance_file)
-            self.solution = vrplib.read_solution(solution_file)
-        elif (instance != None):
-            self.current_instance = instance
-            self.solution = solution
-        else:
-            print("instancia nao inserida")
-        
+    def __init__(self, instance_file, solution_file) -> None:
+        self.current_instance = vrplib.read_instance(instance_file)
+        self.solution = vrplib.read_solution(solution_file)
         self.optimal_routes = []
         self.nx_graph = nx.Graph()
         self.n_nodes = self.current_instance['dimension']
         self.n_edges = 0
 
 
-    def euclidian_distance (self, coord_a, coord_b):
-        distance = (((coord_a['x']-coord_b['x'])**2)+((coord_a['y']-coord_b['y'])**2)) ** (1/2)
-
-        return distance
-    
-
     def add_instance_nodes(self):
         i=0
-        for node in self.current_instance['node_coord']:
+        for i in range(self.n_nodes):
             demand = self.current_instance['demand'][i]
-            new_node_coord = ({'y' : node[1], 'x' : node[0]})
+            self.nx_graph.add_node(i, demand=demand)
+        # if 'node_coord' in self.current_instance.keys():
+        #     for node in self.current_instance['node_coord']:
+        #         demand = self.current_instance['demand'][i]
+        #         new_node_coord = ({'y' : node[1], 'x' : node[0]})
 
-            self.nx_graph.add_node(i, coordinates=new_node_coord, demand=demand)
-            i += 1
+        #         self.nx_graph.add_node(i, coordinates=new_node_coord, demand=demand)
+        #         i += 1
+        # else:
+        #     num_nodes = self.current_instance['demand'].shape[0]
+        #     fro
 
 
     def add_instance_edges(self):
         for i in range (self.n_nodes):
             for j in range(i+1, self.n_nodes):
-                dist = self.euclidian_distance(self.nx_graph.nodes[i]['coordinates'], self.nx_graph.nodes[j]['coordinates'])
-                dist = float(dist)
-                self.nx_graph.add_edge(i, j, distance=dist)
+                self.nx_graph.add_edge(i, j, distance=self.current_instance['edge_weight'][i,j])
                 self.n_edges += 1
 
-    
+
     def resize_graph (self, size):
         quantity = size-self.n_nodes
         for i in range(quantity):
             demand = 0
-            node_coord = ({'y' : np.inf, 'x' : np.inf})
+            distance = 4294967296
 
-            self.nx_graph.add_node(self.n_nodes, coordinates=node_coord, demand=demand)
+            self.nx_graph.add_node(self.n_nodes, demand=demand)
             self.n_nodes += 1
+
+            for j in range(self.n_nodes):
+                for k in range (j+1, self.n_nodes):
+                    self.nx_graph.add_edge(j, k, distance=distance)
+                    self.n_edges += 1
 
 
     def add_solution(self):
@@ -107,11 +103,10 @@ class Conversor:
         print(self.optimal_routes)
 
 
-    def convert_to_t_geometric (self, size=None):
+    def convert_to_t_geometric (self, size):
         self.add_instance_nodes()
-        if size != None:
-            self.resize_graph(size)
         self.add_instance_edges()
+        self.resize_graph(size)
         self.add_solution()
 
         gnn_graph = from_networkx(self.nx_graph, group_node_attrs=['demand'], group_edge_attrs=['distance'])
