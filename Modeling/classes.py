@@ -129,54 +129,24 @@ class PYG_DeepGCNEncoder(torch.nn.Module):
     
 
 
+def get_model (model_name, model_subsection, n_layers, n_nodes):
+    if model_name == "ResGatedGraphConv":
+        model = CVRP_ResGatedGraphConv(n_layers, n_nodes)
 
-model_name = ""
-model_subsection = ""
-
-# A ideia é fazer algo assim:
-if model_name == "ResGatedGraphConv":
-    model = CVRP_ResGatedGraphConv(1,16)
-
-elif model_name == "GCNConv":
-    model = CVRP_GCNConv(1,16)
-    
-elif model_name == "GraphConv":
-    model = CVRP_GraphConv(1,16)
-    
-elif model_name == "DeepGCNEncoder":
-    if model_subsection == "gen_conv":
-        model = PYG_DeepGCNEncoder(1,16,conv_type="gen_conv")
+    elif model_name == "GCNConv":
+        model = CVRP_GCNConv(n_layers, n_nodes)
         
-    elif model_subsection == "pdn_conv":
-        model = PYG_DeepGCNEncoder(1,16,conv_type="pdn_conv")
+    elif model_name == "GraphConv":
+        model = CVRP_GraphConv(n_layers, n_nodes)
         
-    elif model_subsection == "transformer_conv":
-        model = PYG_DeepGCNEncoder(1,16,conv_type="transformer_conv")
-        
+    elif model_name == "DeepGCNEncoder":
+        if model_subsection == "gen_conv":
+            model = PYG_DeepGCNEncoder(n_layers, n_nodes,conv_type="gen_conv")
+            
+        elif model_subsection == "pdn_conv":
+            model = PYG_DeepGCNEncoder(n_layers, n_nodes,conv_type="pdn_conv")
+            
+        elif model_subsection == "transformer_conv":
+            model = PYG_DeepGCNEncoder(n_layers, n_nodes,conv_type="transformer_conv")
 
-
-optimizer = torch.optim.Adam(model.parameters())
-model.to(device)
-
-def train():
-    model.train()
-    total_loss = 0
-    for data in loader_train:
-        data = data.to(device)
-        optimizer.zero_grad()
-        out = model(data)
-        loss = ((data.y - out) ** 2).mean()
-        loss.backward()
-        optimizer.step()
-        total_loss += float(loss) * data.num_graphs
-    return total_loss / len(loader_train.dataset)
-
-@torch.no_grad()
-def test(loader):
-    total_loss = 0
-    for data in loader:
-        data = data.to(device)
-        out = model(data)
-        loss = ((data.y - out) ** 2).mean()
-        total_loss += float(loss) * data.num_graphs
-    return total_loss / len(loader_train.dataset)
+    return model
