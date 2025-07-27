@@ -17,12 +17,14 @@ class File_manager:
         for i in range(cpu_num):
             self.subsets.append(self.set[i*step:(i+1)*step])
 
-        self.subsets[cpu_num-1].append(self.set[-(len(self.set)%cpu_num)::])
+        rest = self.set[len(self.set)-len(self.set)%cpu_num::]
+        self.subsets[cpu_num-1] = self.subsets[cpu_num-1] + rest
+        print(self.subsets)
 
     
 
-    def file_result (self):
-        with open("TestResults.csv", 'a', newline='') as csvfile:
+    def file_result (self, model_name):
+        with open("results/"+model_name+"_results.csv", 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
             writer.writerow(["set_name"] +["ACO_time"] + ["ACO_iterations"] + ["ACO_obj_func"] +
@@ -35,3 +37,6 @@ class File_manager:
                     
                     for row in reader:
                         writer.writerow(row)
+        
+        for i in range (len(self.files)):
+            os.remove(self.files[i])

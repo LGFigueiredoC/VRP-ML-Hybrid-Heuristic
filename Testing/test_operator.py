@@ -1,13 +1,12 @@
 import math
 import time
-import model
+from modeler import *
 import csv
 import numpy as np
 import torch
 from torch_geometric.data import Data
 import vrplib
 from conversor import Conversor
-from model import Model
 import aco_cvrp_cpp
 
 class Test_operator:
@@ -32,6 +31,8 @@ class Test_operator:
         for i in range(probMatrix.shape[0]):
             soma = probMatrix.sum(axis=1)[i]
             for j in range(probMatrix.shape[1]):
+                if soma == 0:
+                    return np.zeros(n*n)
                 probMatrix[i][j] /= soma;
 
         #transformação do tipo np.array para list do python
@@ -39,35 +40,46 @@ class Test_operator:
     
 
     def test (self, subset, file_name, test_config, model_name):
-
         with open(file_name, 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             
-            for i in range (0, len(subset)-1, 2):
-                sol_file = "test_set/"+subset[i]
-                ins_file = "test_set/"+subset[i+1]
+            conversion = True
+            for i in range (0, 2, 2): #len(subset)-1
+                if not conversion:
+                    break
+                sol_file = test_config.data_set+subset[i]
+                ins_file = test_config.data_set+subset[i+1]
                 solution = vrplib.read_solution(sol_file)
                 instance = vrplib.read_instance(ins_file)
-                print(subset[i+1])
+                # print(subset[i+1])
 
-                for j in range(5):
-                    # conversion
+                for j in range(1):
+                    ## conversion
                     conv_start = time.time()
-                    model = Model(-1, 20, 5)
-                    model.load_state_dict(torch.load(model_name, weights_only=True, map_location=test_config.device))
-                    
-                    c = Conversor(instance=instance, solution=solution)
-                    data = c.convert_to_t_geometric()
+                    parameters = get_model_parameters(model_name)
 
+                    model = get_model(parameters[0], parameters[1], parameters[2], parameters[3])
+                    #print("pos modelo")
+
+                    model.load_state_dict(torch.load((test_config.model_dir+model_name), weights_only=True, map_location=test_config.device))
+
+                    #print("model")
+                    c = Conversor(instance_file=ins_file, solution_file=sol_file)
+                    data = c.convert_to_t_geometric()
+                    #print("conversor")
                     gnnData  = Data(x=torch.tensor(data.x, dtype=torch.float64),edge_index=data.edge_index,
                                         edge_attr=torch.tensor(data["edge_attr"], dtype=torch.float64),
                                         y=torch.tensor(data.y, dtype=torch.float64))
-
+                    #print(gnnData)
                     output = model(gnnData)
                     probMatrix = Test_operator.getProbMatrix(output, gnnData.edge_index)
                     conv_end = time.time()
-
-                    # aco
+                
+                    if (probMatrix.sum() == 0):
+                        print("Model converged to zero")
+                        conversion = False
+                        break             
+                    ## aco
                     aco_start = time.time()
                     aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                 test_config.alpha, test_config.beta, test_config.Q,
@@ -76,7 +88,7 @@ class Test_operator:
                     [path_aco, cost_aco, it_aco] = aco.optimize(100, 25)
                     aco_end = time.time()
                     
-                    # aco+gnn
+                    ## aco+gnn
                     model_start = time.time()
                     aco_gnn = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                     test_config.alpha, test_config.beta, test_config.Q,
@@ -91,7 +103,7 @@ class Test_operator:
                     conv_time = conv_end-conv_start
                     model_time = model_end-model_start
 
-                    # print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
+                    print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
                 
                     writer.writerow([subset[i+1]] + [round(aco_time, 2)] + [it_aco] + [round(cost_aco, 2)] +
                         [round(conv_time, 2)] + [round(model_time, 2)] + [it_gnn] +

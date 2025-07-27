@@ -2,7 +2,7 @@ import torch
 import os
 
 class Configuration:
-    def __init__(self):
+    def __init__(self, data_set, model_dir):
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
         elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
@@ -13,6 +13,9 @@ class Configuration:
         torch.manual_seed(0) # Para reproduzir os resultados
 
         torch.set_default_tensor_type(torch.DoubleTensor)
+
+        self.data_set = data_set
+        self.model_dir = model_dir
 
         self.cpu_num = int((os.cpu_count()/2)-1)
 

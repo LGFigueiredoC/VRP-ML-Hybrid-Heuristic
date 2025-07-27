@@ -1,28 +1,25 @@
 from configurations import Configuration
 from file_manager import File_manager
 from test_operator import Test_operator
+from model_run import model_run
+import modeler
 import concurrent.futures
 import time
+import os
 
+model_dir = "trained_models/"
+data_set = "test_set/"
+model_name = "modelo_DeepGCNEncoder_gen_conv_1_64"
 def main ():
-    t1 = time.time()
-    config = Configuration()
-    fm = File_manager("test_set", config.cpu_num)
-    model_name = "2540_epocas"
-    print(fm.subsets)
-    tester = Test_operator()
+    models = os.listdir(model_dir)
+    print(models)
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        results = [executor.submit(tester.test, fm.subsets[i], fm.files[i], config, model_name) for i in range(config.cpu_num)]
-        
-        num = 0
-        for f in concurrent.futures.as_completed(results):
-            num += 1
-            print("done {}".format(num))
-
-    fm.file_result()
-    print(time.time()-t1)
-    
+    i = 1
+    for model in models:
+        print(model_dir+model)
+        model_run(model_dir, model, data_set)
+        print(f"Model {i}/{len(models)}")
+        i += 1
 
 if __name__ == "__main__":
     main()
