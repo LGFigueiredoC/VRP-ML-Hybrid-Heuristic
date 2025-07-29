@@ -7,7 +7,7 @@ import time
 def model_run (model_dir, model_name, data_set):
     t1 = time.time()
     config = Configuration(model_dir=model_dir, data_set=data_set)
-    fm = File_manager("test_set", config.cpu_num)
+    fm = File_manager(data_set, config.cpu_num)
     # print(fm.subsets)
     tester = Test_operator()
 

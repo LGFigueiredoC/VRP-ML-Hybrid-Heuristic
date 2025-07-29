@@ -33,7 +33,7 @@ class Test_operator:
             for j in range(probMatrix.shape[1]):
                 if soma == 0:
                     return np.zeros(n*n)
-                probMatrix[i][j] /= soma;
+                probMatrix[i][j] /= soma
 
         #transformação do tipo np.array para list do python
         return probMatrix
@@ -44,7 +44,7 @@ class Test_operator:
             writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             
             conversion = True
-            for i in range (0, 2, 2): #len(subset)-1
+            for i in range (0, len(subset)-1, 2): #len(subset)-1
                 if not conversion:
                     break
                 sol_file = test_config.data_set+subset[i]
@@ -53,7 +53,7 @@ class Test_operator:
                 instance = vrplib.read_instance(ins_file)
                 # print(subset[i+1])
 
-                for j in range(1):
+                for j in range(5):
                     ## conversion
                     conv_start = time.time()
                     parameters = get_model_parameters(model_name)
@@ -103,7 +103,7 @@ class Test_operator:
                     conv_time = conv_end-conv_start
                     model_time = model_end-model_start
 
-                    print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
+                    #print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
                 
                     writer.writerow([subset[i+1]] + [round(aco_time, 2)] + [it_aco] + [round(cost_aco, 2)] +
                         [round(conv_time, 2)] + [round(model_time, 2)] + [it_gnn] +

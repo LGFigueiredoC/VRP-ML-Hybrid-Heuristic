@@ -19,7 +19,7 @@ class File_manager:
 
         rest = self.set[len(self.set)-len(self.set)%cpu_num::]
         self.subsets[cpu_num-1] = self.subsets[cpu_num-1] + rest
-        print(self.subsets)
+        #print(self.subsets)
 
     
 

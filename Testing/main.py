@@ -8,11 +8,12 @@ import time
 import os
 
 model_dir = "trained_models/"
-data_set = "test_set/"
+data_set = "data_set/"
 model_name = "modelo_DeepGCNEncoder_gen_conv_1_64"
 def main ():
     models = os.listdir(model_dir)
-    print(models)
+    models.sort()
+    #print(models)
 
     i = 1
     for model in models:
