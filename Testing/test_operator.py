@@ -8,6 +8,7 @@ from torch_geometric.data import Data
 import vrplib
 from conversor import Conversor
 import aco_cvrp_cpp
+import pickle
 
 class Test_operator:
     def __init__(self):
@@ -28,57 +29,58 @@ class Test_operator:
             probMatrix[edge_index[0][i]][edge_index[1][i]] = abs(matrix[i])    
 
         #normalização
+        normalized_vec = np.zeros(n)
         for i in range(probMatrix.shape[0]):
-            soma = probMatrix.sum(axis=1)[i]
-            for j in range(probMatrix.shape[1]):
-                if soma == 0:
-                    return np.zeros(n*n)
-                probMatrix[i][j] /= soma
+            normalized_vec[i] = 1/(probMatrix.sum(axis=1)[i])
+        
+        probMatrix *= normalized_vec
 
         #transformação do tipo np.array para list do python
         return probMatrix
     
 
-    def test (self, subset, file_name, test_config, model_name):
-        with open(file_name, 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            
-            conversion = True
-            for i in range (0, len(subset)-1, 2): #len(subset)-1
+    def test (self, subset, file_name, test_config, model_name):        
+        parameters = get_model_parameters(model_name)
+
+        load_start = time.time()
+        model = get_model(parameters[0], parameters[1], parameters[2], parameters[3])
+        #print("pos modelo")
+        model.load_state_dict(torch.load((test_config.model_dir+model_name), weights_only=True, map_location=test_config.device))
+        #print("model")
+        conversion = True
+        load_time = time.time()-load_start
+
+        with open(file_name, "wb") as file:
+            for i in range (0, 2, 2): #len(subset)-1
                 if not conversion:
                     break
+
                 sol_file = test_config.data_set+subset[i]
                 ins_file = test_config.data_set+subset[i+1]
+                time_readsol = time.time()
                 solution = vrplib.read_solution(sol_file)
                 instance = vrplib.read_instance(ins_file)
-                # print(subset[i+1])
+                print(time.time()-time_readsol)
+                ## conversion
+                conv_start = time.time()
+                c = Conversor(instance_file=ins_file, solution_file=sol_file)
+                data = c.convert_to_t_geometric()
 
-                for j in range(5):
-                    ## conversion
-                    conv_start = time.time()
-                    parameters = get_model_parameters(model_name)
+                gnnData  = Data(x=torch.tensor(data.x, dtype=torch.float64),edge_index=data.edge_index,
+                                    edge_attr=torch.tensor(data["edge_attr"], dtype=torch.float64),
+                                    y=torch.tensor(data.y, dtype=torch.float64))
 
-                    model = get_model(parameters[0], parameters[1], parameters[2], parameters[3])
-                    #print("pos modelo")
+                output = model(gnnData)
+                probMatrix = Test_operator.getProbMatrix(output, gnnData.edge_index)
 
-                    model.load_state_dict(torch.load((test_config.model_dir+model_name), weights_only=True, map_location=test_config.device))
+                conv_time = time.time()-conv_start + load_time
 
-                    #print("model")
-                    c = Conversor(instance_file=ins_file, solution_file=sol_file)
-                    data = c.convert_to_t_geometric()
-                    #print("conversor")
-                    gnnData  = Data(x=torch.tensor(data.x, dtype=torch.float64),edge_index=data.edge_index,
-                                        edge_attr=torch.tensor(data["edge_attr"], dtype=torch.float64),
-                                        y=torch.tensor(data.y, dtype=torch.float64))
-                    #print(gnnData)
-                    output = model(gnnData)
-                    probMatrix = Test_operator.getProbMatrix(output, gnnData.edge_index)
-                    conv_end = time.time()
-                
-                    if (probMatrix.sum() == 0):
-                        print("Model converged to zero")
-                        conversion = False
-                        break             
+                if (probMatrix.sum() == 0):
+                    print("Model converged to zero")
+                    conversion = False
+                    break      
+
+                for j in range(1):            
                     ## aco
                     aco_start = time.time()
                     aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
@@ -86,25 +88,19 @@ class Test_operator:
                                                 test_config.decay, 0, test_config.probNew, test_config.seed)
                     aco.init(instance["edge_weight"], instance["demand"], None)
                     [path_aco, cost_aco, it_aco] = aco.optimize(100, 25)
-                    aco_end = time.time()
-                    
+                    aco_time = time.time()-aco_start
+
                     ## aco+gnn
                     model_start = time.time()
                     aco_gnn = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                     test_config.alpha, test_config.beta, test_config.Q,
                                                     test_config.decay, 0, test_config.probNew, test_config.seed)
-                    
+
                     aco_gnn.init(instance["edge_weight"], instance["demand"], probMatrix)
                     [path_gnn, cost_gnn, it_gnn] = aco.optimize(100, 25)
-                    model_end = time.time()
+                    model_time = time.time()-model_start
 
-                    # times; writing
-                    aco_time = aco_end-aco_start
-                    conv_time = conv_end-conv_start
-                    model_time = model_end-model_start
-
-                    #print("{} {} {} {} {}".format(subset[i+1], aco_time, conv_time, model_time, solution["cost"]))
-                
-                    writer.writerow([subset[i+1]] + [round(aco_time, 2)] + [it_aco] + [round(cost_aco, 2)] +
-                        [round(conv_time, 2)] + [round(model_time, 2)] + [it_gnn] +
-                        [round(cost_gnn, 2)] + [solution["cost"]])
+                    cost = solution["cost"]
+                    result = f"{ins_file},{round(aco_time, 2)},{it_aco},{round(cost_aco,2)},{round(conv_time,2)},{round(model_time,2)},{it_gnn},{round(cost_gnn,2)},{cost}"
+                    print()
+                    pickle.dump(result, file)

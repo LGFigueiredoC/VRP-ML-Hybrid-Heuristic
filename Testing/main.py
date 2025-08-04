@@ -8,7 +8,7 @@ import time
 import os
 
 model_dir = "trained_models/"
-data_set = "data_set/"
+data_set = "test_set/"
 model_name = "modelo_DeepGCNEncoder_gen_conv_1_64"
 def main ():
     models = os.listdir(model_dir)
@@ -21,6 +21,7 @@ def main ():
         model_run(model_dir, model, data_set)
         print(f"Model {i}/{len(models)}")
         i += 1
+        break
 
 if __name__ == "__main__":
     main()
