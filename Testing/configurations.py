@@ -24,5 +24,5 @@ class Configuration:
         self.beta = 1
         self.decay = 0.05
         self.initCity = 0
-        self.seed = 0
+        self.seed = [5,7,11,13,17]
         self.probNew = 0.1

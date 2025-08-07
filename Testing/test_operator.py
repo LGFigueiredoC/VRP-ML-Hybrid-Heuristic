@@ -26,7 +26,7 @@ class Test_operator:
 
         #atribuição da matriz
         for i in range (probMatrix.size-n):
-            probMatrix[edge_index[0][i]][edge_index[1][i]] = abs(matrix[i])    
+            probMatrix[edge_index[0][i]][edge_index[1][i]] = matrix[i]    
 
         #normalização
         normalized_vec = np.zeros(n)
@@ -51,7 +51,7 @@ class Test_operator:
         load_time = time.time()-load_start
 
         with open(file_name, "wb") as file:
-            for i in range (0, 2, 2): #len(subset)-1
+            for i in range (0, len(subset)-1, 2): #len(subset)-1
                 if not conversion:
                     break
 
@@ -80,12 +80,12 @@ class Test_operator:
                     conversion = False
                     break      
 
-                for j in range(1):            
+                for j in range(5):            
                     ## aco
                     aco_start = time.time()
                     aco = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                 test_config.alpha, test_config.beta, test_config.Q,
-                                                test_config.decay, 0, test_config.probNew, test_config.seed)
+                                                test_config.decay, 0, test_config.probNew, test_config.seed[j])
                     aco.init(instance["edge_weight"], instance["demand"], None)
                     [path_aco, cost_aco, it_aco] = aco.optimize(100, 25)
                     aco_time = time.time()-aco_start
@@ -94,7 +94,7 @@ class Test_operator:
                     model_start = time.time()
                     aco_gnn = aco_cvrp_cpp.ACO_CVRP(10, instance['dimension'], instance['capacity'],
                                                     test_config.alpha, test_config.beta, test_config.Q,
-                                                    test_config.decay, 0, test_config.probNew, test_config.seed)
+                                                    test_config.decay, 0, test_config.probNew, test_config.seed[j])
 
                     aco_gnn.init(instance["edge_weight"], instance["demand"], probMatrix)
                     [path_gnn, cost_gnn, it_gnn] = aco.optimize(100, 25)
