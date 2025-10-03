@@ -72,8 +72,6 @@ with open("resized_data_set.bin", "rb") as data_set:
 #     print(len(set))
 #     print(set)
 #data_set.sort(key=lambda x: len(x["coordinates"]))
-#for instance in data_set:
-    #print_dimension(instance)
 
 
 end = time.time()
